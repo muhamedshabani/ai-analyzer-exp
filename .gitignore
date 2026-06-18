@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/.next/
+**/node_modules/
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
+.env*
+!.env.local.example
+appsettings.Development.json

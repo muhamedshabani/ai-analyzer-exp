@@ -1,0 +1,5 @@
+"use client";
+import { Chip, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
+import Link from "next/link";
+import { Project } from "@/lib/types";
+export default function RequestTable({ requests }: { requests: Project[] }) { return <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid #e5e9f2" }}><Table><TableHead><TableRow><TableCell>Project</TableCell><TableCell>Client</TableCell><TableCell>Industry</TableCell><TableCell>Status</TableCell><TableCell>Submitted</TableCell></TableRow></TableHead><TableBody>{requests.map(x => <TableRow key={x.id} hover><TableCell><Link href={`/requests/${x.id}`} style={{ color: "#3157d5", fontWeight: 650 }}>{x.projectTitle}</Link></TableCell><TableCell>{x.clientName}</TableCell><TableCell>{x.industry}</TableCell><TableCell><Chip size="small" label={x.status} color={x.status === "Analyzed" || x.status === "ProposalSent" ? "success" : "default"} /></TableCell><TableCell>{new Date(x.createdAt).toLocaleDateString()}</TableCell></TableRow>)}</TableBody></Table></TableContainer>; }
