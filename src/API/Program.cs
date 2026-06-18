@@ -44,7 +44,11 @@ builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IProjectRequestService, ProjectRequestService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IMailSenderService, DevelopmentMailSender>();
-builder.Services.AddHttpClient<IAiProjectAnalyzerService, AiProjectAnalyzerService>().SetHandlerLifetime(TimeSpan.FromMinutes(5));
+builder.Services.AddHttpClient<IAiProjectAnalyzerService, AiProjectAnalyzerService>(client =>
+{
+    // A short timeout keeps a live demo responsive; failures automatically use the local analyzer.
+    client.Timeout = TimeSpan.FromSeconds(12);
+}).SetHandlerLifetime(TimeSpan.FromMinutes(5));
 builder.Services.AddCors(x => x.AddPolicy("Frontend", p => p.WithOrigins(builder.Configuration["FrontendUrl"] ?? "http://localhost:3000").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
