@@ -6,7 +6,7 @@ Backend-first thesis demo built with ASP.NET Core 8, Clean Architecture, EF Core
 
 - `src/Domain` — entities and enums
 - `src/Application` — DTOs, interfaces, mapping, and business services
-- `src/Infrastructure` — OpenAI integration, JWT creation, and development mail sender
+- `src/Infrastructure` — local Ollama integration, JWT creation, and development mail sender
 - `src/Data` — EF Core context and repositories
 - `src/API` — controllers, authentication/authorization, dependency injection, Swagger, and demo seeding
 
@@ -73,18 +73,16 @@ Use `POST /api/auth/login`, copy the returned token, then select **Authorize** i
 
 ## AI behavior
 
-No API key is required for the demo. If `OpenAI:ApiKey`, `OPENAI_API_KEY`, and `AI_API_KEY` are all missing, the external call fails, times out, or returns incomplete JSON, the application returns a deterministic local analysis instead of failing. External calls have a 12-second timeout so a live demonstration remains responsive.
+No API key is required. The analyzer uses Ollama locally at `http://127.0.0.1:11434/api/chat`. If Ollama is unavailable or returns incomplete JSON, the API reports the failure instead of presenting the deterministic safety fallback as genuine AI output.
 
-To enable the external integration without committing a key:
+Start Ollama and install the configured model:
 
 ```bash
-export OPENAI_API_KEY="your-key"
-dotnet run --project src/API/API.csproj
+ollama serve
+ollama pull qwen3:4b
 ```
 
-`AI_API_KEY` is accepted as an alternative environment-variable name.
-
-The model can be changed through `OpenAI:Model`. Review generated estimates before sending them to a client.
+The endpoint and model can be changed through `Ollama:BaseUrl` and `Ollama:Model`. Review generated estimates before sending them to a client.
 
 ## Mail behavior
 

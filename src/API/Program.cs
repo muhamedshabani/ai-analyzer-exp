@@ -63,8 +63,8 @@ builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IMailSenderService, DevelopmentMailSender>();
 builder.Services.AddHttpClient<IAiProjectAnalyzerService, AiProjectAnalyzerService>(client =>
 {
-    // A short timeout keeps a live demo responsive; failures automatically use the local analyzer.
-    client.Timeout = TimeSpan.FromSeconds(12);
+    // The first local inference may include model-loading time on the M1 Mac.
+    client.Timeout = TimeSpan.FromMinutes(3);
 }).SetHandlerLifetime(TimeSpan.FromMinutes(5));
 builder.Services.AddCors(x => x.AddPolicy("Frontend", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 

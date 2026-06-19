@@ -3,8 +3,8 @@
 import AppShell from "@/components/AppShell";
 import { api } from "@/lib/api";
 import { Analysis, Project } from "@/lib/types";
-import { AutoAwesome, CheckCircleOutline, EmailOutlined } from "@mui/icons-material";
-import { Alert, Button, Chip, CircularProgress, Fade, Grid2 as Grid, LinearProgress, Paper, Skeleton, Stack, Typography } from "@mui/material";
+import { AutoAwesome, CheckCircleOutline, EmailOutlined, LightbulbOutlined } from "@mui/icons-material";
+import { Alert, Box, Button, Chip, CircularProgress, Divider, Fade, Grid2 as Grid, LinearProgress, Paper, Skeleton, Stack, Typography } from "@mui/material";
 import { useParams } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
@@ -16,8 +16,25 @@ const loadingMessages = [
   "Preparing risks and the client reply…"
 ];
 
-function AnalysisCard({ title, children, wide = false }: { title: string; children: ReactNode; wide?: boolean }) {
-  return <Grid size={{ xs: 12, md: wide ? 12 : 6 }}><Fade in timeout={550}><Paper elevation={0} sx={{ p: 3, border: "1px solid #e5e9f2", height: "100%", boxShadow: "0 8px 24px rgba(36, 57, 96, 0.05)" }}><Stack direction="row" alignItems="center" gap={1}><CheckCircleOutline color="success" fontSize="small" /><Typography variant="overline" color="primary" fontWeight={800}>{title}</Typography></Stack><Typography component="div" sx={{ whiteSpace: "pre-line", mt: 1, lineHeight: 1.75 }}>{children}</Typography></Paper></Fade></Grid>;
+function technologyRecommendation(analysis: Analysis) {
+  const stack = analysis.suggestedTechStack.toLowerCase();
+  if (stack.includes("sqlite")) return "Keep SQLite for the thesis demo because it is portable and reliable. Before a multi-user production launch, migrate to PostgreSQL or Azure SQL and add automated backups, monitoring, and CI/CD.";
+  if (stack.includes("azure")) return "Standardize deployment on Azure using a managed database, application monitoring, and an automated CI/CD pipeline. Keep infrastructure intentionally small for the MVP.";
+  return "Use the proposed stack for the MVP because it aligns with the available team. Before production, add a managed database, centralized monitoring, automated tests, and a simple CI/CD pipeline.";
+}
+
+function teamRecommendation(analysis: Analysis) {
+  const team = analysis.recommendedTeam.toLowerCase();
+  const recommendations: string[] = [];
+  if (!team.includes("qa") && !team.includes("test")) recommendations.push("hire or assign a part-time QA Automation Engineer before the stabilization phase");
+  if (!team.includes("ux") && !team.includes("design")) recommendations.push("contract a UX/UI Designer for discovery, wireframes, and usability review");
+  if (!team.includes("devops") && !team.includes("cloud")) recommendations.push("add a part-time DevOps/Cloud Engineer before production deployment");
+  if (!recommendations.length) return "The proposed team covers the main delivery disciplines. Reserve 10–15% of team capacity for technical leadership, review, and release support.";
+  return `Keep the proposed employees as the core MVP team. To close capability gaps, ${recommendations.slice(0, 2).join(" and ")}.`;
+}
+
+function AnalysisCard({ title, children, wide = false, recommendation }: { title: string; children: ReactNode; wide?: boolean; recommendation?: string }) {
+  return <Grid size={{ xs: 12, md: wide ? 12 : 6 }}><Fade in timeout={550}><Paper elevation={0} sx={{ p: 3, border: "1px solid #e5e9f2", height: "100%", boxShadow: "0 8px 24px rgba(36, 57, 96, 0.05)" }}><Stack direction="row" alignItems="center" gap={1}><CheckCircleOutline color="success" fontSize="small" /><Typography variant="overline" color="primary" fontWeight={800}>{title}</Typography></Stack><Typography component="div" sx={{ whiteSpace: "pre-line", mt: 1, lineHeight: 1.75 }}>{children}</Typography>{recommendation && <><Divider sx={{ my: 2.5 }} /><Box sx={{ p: 2, borderRadius: 2, bgcolor: "rgba(49, 87, 213, 0.06)", border: "1px solid rgba(49, 87, 213, 0.14)" }}><Stack direction="row" gap={1} alignItems="center" mb={0.75}><LightbulbOutlined color="primary" fontSize="small" /><Typography variant="subtitle2" color="primary" fontWeight={800}>Recommendation</Typography></Stack><Typography variant="body2" sx={{ lineHeight: 1.7 }}>{recommendation}</Typography></Box></>}</Paper></Fade></Grid>;
 }
 
 export default function RequestDetailsPage() {
@@ -48,13 +65,13 @@ export default function RequestDetailsPage() {
     return () => window.clearInterval(timer);
   }, [busy, displayedAnalysis]);
 
-  const sections = useMemo<Array<{ title: string; value: string; wide?: boolean }>>(() => displayedAnalysis ? [
+  const sections = useMemo<Array<{ title: string; value: string; wide?: boolean; recommendation?: string }>>(() => displayedAnalysis ? [
     { title: "Project summary", value: displayedAnalysis.projectSummary, wide: true },
     { title: "Functional requirements", value: displayedAnalysis.functionalRequirements },
     { title: "Suggested modules", value: displayedAnalysis.suggestedModules },
-    { title: "Technology", value: displayedAnalysis.suggestedTechStack },
+    { title: "Technology", value: displayedAnalysis.suggestedTechStack, recommendation: technologyRecommendation(displayedAnalysis) },
     { title: "Estimated cost", value: displayedAnalysis.estimatedCostRange },
-    { title: "Recommended team", value: displayedAnalysis.recommendedTeam, wide: true },
+    { title: "Recommended team", value: displayedAnalysis.recommendedTeam, wide: true, recommendation: teamRecommendation(displayedAnalysis) },
     { title: "Clarification questions", value: displayedAnalysis.clarificationQuestions },
     { title: "Risks and assumptions", value: displayedAnalysis.risksAndAssumptions },
     { title: "Client reply draft", value: displayedAnalysis.clientReplyDraft, wide: true }
@@ -74,7 +91,7 @@ export default function RequestDetailsPage() {
         await wait(420);
         setRevealedSections(section);
       }
-      setNotice("Analysis generated successfully.");
+      setNotice("Local Ollama analysis completed successfully.");
     } catch (x) {
       setError(x instanceof Error ? x.message : "Analysis failed.");
       load();
@@ -114,7 +131,7 @@ export default function RequestDetailsPage() {
       : displayedAnalysis ? <>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2} mb={2}><div><Typography variant="h5">AI analysis</Typography>{busy === "analyze" && <Typography color="text.secondary" variant="body2">Building the response section by section…</Typography>}</div><Stack direction="row" gap={1} flexWrap="wrap"><Chip label={`${displayedAnalysis.complexityLevel} complexity`} color="primary" variant="outlined" /><Chip label={displayedAnalysis.estimatedTimeline} /></Stack></Stack>
         {busy === "analyze" && <LinearProgress sx={{ mb: 2, height: 4, borderRadius: 2 }} />}
-        <Grid container spacing={2}>{sections.slice(0, revealedSections).map(section => <AnalysisCard key={section.title} title={section.title} wide={section.wide}>{section.value}</AnalysisCard>)}</Grid>
+        <Grid container spacing={2}>{sections.slice(0, revealedSections).map(section => <AnalysisCard key={section.title} title={section.title} wide={section.wide} recommendation={section.recommendation}>{section.value}</AnalysisCard>)}</Grid>
       </> : <Paper elevation={0} sx={{ p: 5, textAlign: "center", border: "1px dashed #b8c2d8" }}><AutoAwesome color="primary" sx={{ fontSize: 42 }} /><Typography variant="h6" mt={1}>Ready for analysis</Typography><Typography color="text.secondary">Generate requirements, estimates, risks, and a suggested delivery team.</Typography></Paper>}
     </>}
   </AppShell>;

@@ -4,7 +4,6 @@ using Domain.Entities;
 using Domain.Enums;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -30,44 +29,35 @@ public sealed class AiProjectAnalyzerService(
         ArgumentNullException.ThrowIfNull(request);
         employees ??= [];
 
-        var apiKey = FirstNonEmpty(
-            configuration["OpenAI:ApiKey"],
-            Environment.GetEnvironmentVariable("OPENAI_API_KEY"),
-            Environment.GetEnvironmentVariable("AI_API_KEY"));
-
-        if (apiKey is null)
-        {
-            logger.LogInformation("No AI API key configured; using deterministic demo analysis.");
-            return CreateMockAnalysis(request, employees, "Demo mode: no AI API key is configured; this analysis was generated locally.");
-        }
-
         try
         {
-            var result = await AnalyzeWithApiAsync(request, employees, apiKey, ct);
+            var result = await AnalyzeWithOllamaAsync(request, employees, ct);
             ValidateApiResult(result);
-            result.InternalNotes = AppendNote(result.InternalNotes, "External AI analysis completed successfully. Review estimates before sending.");
+            result.IsFallback = false;
+            result.WarningMessage = string.Empty;
+            result.InternalNotes = AppendNote(result.InternalNotes, "Local Ollama analysis completed successfully. Review estimates before sending.");
             return result;
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "External AI analysis failed; using deterministic demo fallback.");
-            return CreateMockAnalysis(request, employees, "Warning: the external AI service was unavailable or returned invalid data; a local fallback analysis was generated.");
+            logger.LogWarning(ex, "Local Ollama analysis failed; using deterministic demo fallback.");
+            return CreateMockAnalysis(request, employees,
+                "Ollama analysis failed. Confirm that Ollama is running on port 11434 and that the configured model is installed.");
         }
     }
 
-    private async Task<AiProjectAnalysisResultDto> AnalyzeWithApiAsync(
+    private async Task<AiProjectAnalysisResultDto> AnalyzeWithOllamaAsync(
         ProjectRequest request,
         IReadOnlyCollection<Employee> employees,
-        string apiKey,
         CancellationToken ct)
     {
-        using var message = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/chat/completions");
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-        message.Content = JsonContent.Create(new
+        var payload = new
         {
-            model = configuration["OpenAI:Model"] ?? "gpt-4o-mini",
-            response_format = new { type = "json_object" },
-            temperature = 0.2,
+            model = configuration["Ollama:Model"] ?? "qwen3:4b",
+            stream = false,
+            format = "json",
+            think = false,
+            options = new { temperature = 0.2 },
             messages = new[]
             {
                 new
@@ -121,14 +111,18 @@ public sealed class AiProjectAnalyzerService(
                     }, JsonOptions)
                 }
             }
-        });
+        };
 
-        using var response = await http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
-        using var json = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
-        var content = json.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
+        var baseUrl = (configuration["Ollama:BaseUrl"] ?? "http://127.0.0.1:11434").TrimEnd('/');
+        using var response = await http.PostAsJsonAsync($"{baseUrl}/api/chat", payload, ct);
+        var responseBody = await response.Content.ReadAsStringAsync(ct);
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"Ollama returned HTTP {(int)response.StatusCode}: {responseBody}");
+
+        using var json = JsonDocument.Parse(responseBody);
+        var content = json.RootElement.GetProperty("message").GetProperty("content").GetString();
         return JsonSerializer.Deserialize<AiProjectAnalysisResultDto>(content ?? string.Empty, JsonOptions)
-            ?? throw new InvalidOperationException("AI service returned an empty analysis.");
+            ?? throw new InvalidOperationException("Ollama returned an empty analysis.");
     }
 
     private static AiProjectAnalysisResultDto CreateMockAnalysis(
@@ -156,6 +150,8 @@ public sealed class AiProjectAnalyzerService(
 
         return new AiProjectAnalysisResultDto
         {
+            IsFallback = true,
+            WarningMessage = note,
             ProjectSummary = $"{request.ProjectTitle} is a proposed {request.Industry} solution for {company}. The first release should focus on the core user journey, secure administration, and measurable operational value.",
             FunctionalRequirements = string.Join('\n', new[]
             {
@@ -270,9 +266,6 @@ public sealed class AiProjectAnalyzerService(
         if (required.Any(string.IsNullOrWhiteSpace))
             throw new InvalidOperationException("AI service returned an incomplete analysis.");
     }
-
-    private static string? FirstNonEmpty(params string?[] values) =>
-        values.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x));
 
     private static string AppendNote(string existing, string note) =>
         string.IsNullOrWhiteSpace(existing) ? note : $"{existing.Trim()} {note}";

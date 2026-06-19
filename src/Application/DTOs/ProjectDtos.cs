@@ -32,6 +32,8 @@ public sealed class ProjectRequestDto
 
 public sealed class AiProjectAnalysisResultDto
 {
+    public bool IsFallback { get; set; }
+    public string WarningMessage { get; set; } = string.Empty;
     public string ProjectSummary { get; set; } = string.Empty;
     public string FunctionalRequirements { get; set; } = string.Empty;
     public string SuggestedModules { get; set; } = string.Empty;

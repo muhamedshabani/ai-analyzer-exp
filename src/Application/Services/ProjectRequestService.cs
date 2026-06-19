@@ -29,6 +29,9 @@ public sealed class ProjectRequestService(IProjectRequestRepository projects, IE
     {
         var entity = await projects.GetAsync(id, ct); if (entity is null) return null;
         var result = await analyzer.AnalyzeProjectAsync(entity, await employees.GetAllAsync(ct), ct);
+        // The analyzer keeps its deterministic fallback for demo resilience, but a fallback
+        // must never overwrite or masquerade as a real model analysis in the application.
+        if (result.IsFallback) return result;
         entity.Analysis ??= new AiProjectAnalysis { ProjectRequestId = entity.Id };
         mapper.Map(result, entity.Analysis); entity.Status = ProjectStatus.Analyzed; await projects.SaveChangesAsync(ct); return result;
     }

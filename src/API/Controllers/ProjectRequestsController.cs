@@ -40,13 +40,20 @@ public sealed class ProjectRequestsController(IProjectRequestService service) : 
         return CreatedAtAction(nameof(Get), new { id = item.Id }, item);
     }
 
-    /// <summary>Analyzes a project request using AI or the stable local fallback.</summary>
-    /// <remarks>This operation always returns a demo-safe analysis when the external AI service is unavailable.</remarks>
+    /// <summary>Analyzes a project request using the local Ollama model.</summary>
+    /// <remarks>A fallback result is never presented as a successful AI analysis.</remarks>
     [HttpPost("{id:int}/analyze"), Authorize(Roles = "Admin")]
     public async Task<ActionResult<AiProjectAnalysisResultDto>> Analyze(int id, CancellationToken ct)
     {
         var result = await service.AnalyzeAsync(id, ct);
-        return result is null ? NotFound() : Ok(result);
+        if (result is null) return NotFound();
+        if (result.IsFallback)
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = result.WarningMessage,
+                code = "OLLAMA_UNAVAILABLE"
+            });
+        return Ok(result);
     }
 
     /// <summary>Simulates sending the generated client reply and marks it as sent.</summary>
