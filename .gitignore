@@ -4,6 +4,7 @@
 **/.idea/
 **/.next/
 **/node_modules/
+*.tsbuildinfo
 *.user
 *.suo
 *.db

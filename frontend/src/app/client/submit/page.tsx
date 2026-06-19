@@ -1,11 +1,2 @@
-"use client";
-import AppShell from "@/components/AppShell";
-import { api } from "@/lib/api";
-import { Alert, Button, Grid2 as Grid, Paper, Stack, TextField, Typography } from "@mui/material";
-import { FormEvent, useState } from "react";
-
-export default function SubmitPage() {
-  const [message, setMessage] = useState(""); const [error, setError] = useState("");
-  async function submit(e: FormEvent<HTMLFormElement>) { e.preventDefault(); setError(""); const form = e.currentTarget; const body = Object.fromEntries(new FormData(form)); try { await api("/project-requests", { method: "POST", body: JSON.stringify(body) }); setMessage("Your request was submitted successfully."); form.reset(); } catch (x) { setError(x instanceof Error ? x.message : "Could not submit request."); } }
-  return <AppShell><Typography variant="h4">Tell us about your project</Typography><Typography color="text.secondary" mb={3}>A strong brief produces a clearer initial estimate.</Typography><Paper elevation={0} sx={{ p: 3, border: "1px solid #e5e9f2" }}><Grid container spacing={2} component="form" onSubmit={submit}>{message && <Grid size={12}><Alert severity="success">{message}</Alert></Grid>}{error && <Grid size={12}><Alert severity="error">{error}</Alert></Grid>}<Grid size={{ xs: 12, md: 8 }}><TextField fullWidth name="projectTitle" label="Project title" required /></Grid><Grid size={{ xs: 12, md: 4 }}><TextField fullWidth name="industry" label="Industry" required /></Grid><Grid size={12}><TextField fullWidth multiline minRows={6} name="projectDescription" label="Project description" helperText="Describe users, main workflows, and the outcome you need." required /></Grid><Grid size={{ xs: 12, md: 6 }}><TextField fullWidth name="budgetRange" label="Budget range" placeholder="€20,000–€40,000" required /></Grid><Grid size={{ xs: 12, md: 6 }}><TextField fullWidth type="date" name="desiredDeadline" label="Desired deadline" slotProps={{ inputLabel: { shrink: true } }} /></Grid><Grid size={{ xs: 12, md: 6 }}><TextField fullWidth name="contactEmail" type="email" label="Contact email" required /></Grid><Grid size={{ xs: 12, md: 6 }}><TextField fullWidth name="companyName" label="Company name" /></Grid><Grid size={12}><Button type="submit" variant="contained" size="large">Submit project request</Button></Grid></Grid></Paper></AppShell>;
-}
+import { redirect } from "next/navigation";
+export default function LegacySubmitPage() { redirect("/client/submit-request"); }

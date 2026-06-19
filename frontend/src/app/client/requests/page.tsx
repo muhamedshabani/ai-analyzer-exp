@@ -1,2 +1,2 @@
-import RequestsPage from "@/components/RequestsPage";
-export default function ClientRequestsPage() { return <RequestsPage />; }
+import { redirect } from "next/navigation";
+export default function LegacyClientRequestsPage() { redirect("/client/my-requests"); }

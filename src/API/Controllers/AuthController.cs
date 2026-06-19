@@ -9,6 +9,9 @@ namespace API.Controllers;
 [ApiController, Route("api/auth")]
 public sealed class AuthController(UserManager<AppUser> users, SignInManager<AppUser> signIn, IJwtTokenService tokens) : ControllerBase
 {
+    /// <summary>Creates a client account and returns a JWT access token.</summary>
+    /// <response code="200">The client account and token were created.</response>
+    /// <response code="400">Registration details are invalid or the email already exists.</response>
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponseDto>> Register(RegisterDto dto)
     {
@@ -19,6 +22,9 @@ public sealed class AuthController(UserManager<AppUser> users, SignInManager<App
         return Ok(await Response(user));
     }
 
+    /// <summary>Authenticates a user and returns a JWT token with their roles.</summary>
+    /// <response code="200">Authentication succeeded.</response>
+    /// <response code="401">The email or password is invalid.</response>
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponseDto>> Login(LoginDto dto)
     {

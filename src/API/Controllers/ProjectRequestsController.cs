@@ -9,6 +9,7 @@ namespace API.Controllers;
 [ApiController, Route("api/project-requests"), Authorize]
 public sealed class ProjectRequestsController(IProjectRequestService service) : ControllerBase
 {
+    /// <summary>Returns all requests for admins or only the authenticated client's requests.</summary>
     [HttpGet]
     public async Task<ActionResult<List<ProjectRequestDto>>> GetAll(CancellationToken ct)
     {
@@ -16,6 +17,7 @@ public sealed class ProjectRequestsController(IProjectRequestService service) : 
         return Ok(await service.GetAllAsync(clientId, User.IsInRole("Admin"), ct));
     }
 
+    /// <summary>Returns one project request and its permitted AI analysis fields.</summary>
     [HttpGet("{id:int}")]
     public async Task<ActionResult<ProjectRequestDto>> Get(int id, CancellationToken ct)
     {
@@ -30,6 +32,7 @@ public sealed class ProjectRequestsController(IProjectRequestService service) : 
         return Ok(item);
     }
 
+    /// <summary>Submits a new project request for the authenticated client.</summary>
     [HttpPost, Authorize(Roles = "Client")]
     public async Task<ActionResult<ProjectRequestDto>> Create(CreateProjectRequestDto dto, CancellationToken ct)
     {
@@ -37,6 +40,8 @@ public sealed class ProjectRequestsController(IProjectRequestService service) : 
         return CreatedAtAction(nameof(Get), new { id = item.Id }, item);
     }
 
+    /// <summary>Analyzes a project request using AI or the stable local fallback.</summary>
+    /// <remarks>This operation always returns a demo-safe analysis when the external AI service is unavailable.</remarks>
     [HttpPost("{id:int}/analyze"), Authorize(Roles = "Admin")]
     public async Task<ActionResult<AiProjectAnalysisResultDto>> Analyze(int id, CancellationToken ct)
     {
@@ -44,6 +49,7 @@ public sealed class ProjectRequestsController(IProjectRequestService service) : 
         return result is null ? NotFound() : Ok(result);
     }
 
+    /// <summary>Simulates sending the generated client reply and marks it as sent.</summary>
     [HttpPost("{id:int}/send-reply"), Authorize(Roles = "Admin")]
     public async Task<IActionResult> SendReply(int id, CancellationToken ct)
     {

@@ -20,9 +20,26 @@ builder.Services.AddControllers().AddJsonOptions(x => x.JsonSerializerOptions.Co
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(x =>
 {
-    x.SwaggerDoc("v1", new OpenApiInfo { Title = "AI Project Intake API", Version = "v1" });
-    x.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme { Name = "Authorization", Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT", In = ParameterLocation.Header });
+    x.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "AI Project Intake & Estimation API",
+        Version = "v1",
+        Description = "Backend API for client project intake, employee capacity management, AI-assisted estimation, and simulated client replies. Use the seeded demo accounts to obtain a JWT token from /api/auth/login.",
+        Contact = new OpenApiContact { Name = "Master Thesis Demo" }
+    });
+    x.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Description = "Paste the JWT returned by POST /api/auth/login. Swagger adds the Bearer prefix automatically.",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header
+    });
     x.AddSecurityRequirement(new OpenApiSecurityRequirement { [new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } }] = Array.Empty<string>() });
+    var xmlFile = $"{typeof(Program).Assembly.GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    x.IncludeXmlComments(xmlPath);
 });
 builder.Services.AddDbContext<AppDbContext>(x => x.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddIdentityCore<AppUser>(x => { x.Password.RequiredLength = 6; x.User.RequireUniqueEmail = true; })
@@ -52,11 +69,20 @@ builder.Services.AddHttpClient<IAiProjectAnalyzerService, AiProjectAnalyzerServi
 builder.Services.AddCors(x => x.AddPolicy("Frontend", p => p.WithOrigins(builder.Configuration["FrontendUrl"] ?? "http://localhost:3000").AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
-app.UseSwagger(); app.UseSwaggerUI();
+app.UseSwagger();
+app.UseSwaggerUI(x =>
+{
+    x.SwaggerEndpoint("/swagger/v1/swagger.json", "AI Project Intake API v1");
+    x.DocumentTitle = "AI Project Intake API Documentation";
+    x.DisplayRequestDuration();
+    x.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);
+    x.EnableTryItOutByDefault();
+});
 app.UseCors("Frontend");
 app.UseAuthentication(); app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", utc = DateTime.UtcNow })).AllowAnonymous();
+app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
 using (var scope = app.Services.CreateScope())
 {

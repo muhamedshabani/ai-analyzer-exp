@@ -10,11 +10,12 @@ Backend-first thesis demo built with ASP.NET Core 8, Clean Architecture, EF Core
 - `src/Data` — EF Core context and repositories
 - `src/API` — controllers, authentication/authorization, dependency injection, Swagger, and demo seeding
 
-The separately scaffolded `frontend` folder is intentionally deferred; backend work is the current priority.
+The `frontend` folder contains the Next.js/TypeScript Material UI application for the complete admin and client demo flow.
 
 ## Prerequisites
 
 - .NET 8 SDK
+- Node.js 20 or newer
 
 ## Run the API
 
@@ -24,6 +25,27 @@ dotnet run --project src/API/API.csproj
 ```
 
 Open Swagger at `http://localhost:5080/swagger`. The health check is `GET http://localhost:5080/health`.
+
+## Run the frontend
+
+```bash
+cd frontend
+cp .env.local.example .env.local
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`. `NEXT_PUBLIC_API_URL` defaults to `http://localhost:5080/api`.
+
+Frontend routes:
+
+- `/login` and `/register`
+- `/admin/dashboard`
+- `/admin/employees` and `/admin/employees/create`
+- `/admin/project-requests` and `/admin/project-requests/[id]`
+- `/client/submit-request` and `/client/my-requests`
+
+Authentication is intentionally demo-oriented: the JWT response is stored in `localStorage`, and protected pages redirect users based on their `Admin` or `Client` role.
 
 On first startup, SQLite is created automatically and roles, users, and three employees are seeded. This `EnsureCreated` approach keeps classroom demos reliable without a separate migration step.
 

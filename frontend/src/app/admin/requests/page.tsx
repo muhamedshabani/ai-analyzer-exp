@@ -1,2 +1,2 @@
-import RequestsPage from "@/components/RequestsPage";
-export default function AdminRequestsPage() { return <RequestsPage admin />; }
+import { redirect } from "next/navigation";
+export default function LegacyAdminRequestsPage() { redirect("/admin/project-requests"); }
