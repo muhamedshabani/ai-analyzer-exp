@@ -66,7 +66,7 @@ builder.Services.AddHttpClient<IAiProjectAnalyzerService, AiProjectAnalyzerServi
     // A short timeout keeps a live demo responsive; failures automatically use the local analyzer.
     client.Timeout = TimeSpan.FromSeconds(12);
 }).SetHandlerLifetime(TimeSpan.FromMinutes(5));
-builder.Services.AddCors(x => x.AddPolicy("Frontend", p => p.WithOrigins(builder.Configuration["FrontendUrl"] ?? "http://localhost:3000").AllowAnyHeader().AllowAnyMethod()));
+builder.Services.AddCors(x => x.AddPolicy("Frontend", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 app.UseSwagger();
